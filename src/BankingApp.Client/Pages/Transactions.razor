@@ -1,0 +1,59 @@
+﻿@page "/transactions"
+@using BankingApp.Shared.Dtos.Responses
+@using Microsoft.AspNetCore.Authorization
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Banking App | Transacciones</PageTitle>
+
+<h1>Mis Transacciones</h1>
+
+@if (transactions == null)
+{
+    <p><em>Cargando información...</em></p>
+}
+else if (transactions.Length == 0)
+{
+    <p><em>No hay pagos registrados...</em></p>
+}
+else
+{
+    <table id="purchasesTable" class="table table-stripped table-bordered">
+        <thead>
+            <tr>
+                <th>Monto de la Transacción ($)</th>
+                <th>Fecha de la Transacción</th>
+                <th>Tipo de Transancción</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var transaction in transactions)
+            {
+                <tr>
+                    <td>@transaction.TransactionAmount</td>
+                    <td>@transaction.TransactionDate.ToShortDateString()</td>
+                    <td>@transaction.TransactionType</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private TransactionsResponse[]? transactions;
+    private Guid UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId");
+
+        if (userIdClaim is not null)
+            UserId = Guid.Parse(userIdClaim.Value);
+
+        transactions = await Http.GetFromJsonAsync<TransactionsResponse[]>($"api/Transactions/myTransactions?userId={UserId}");
+    }
+}

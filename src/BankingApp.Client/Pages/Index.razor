@@ -1,0 +1,181 @@
+﻿@page "/index"
+
+@using BankingApp.Shared.Dtos.Responses
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using System.Globalization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Banking App | Home</PageTitle>
+
+
+<h1 class="p-3">Estado de cuenta</h1>
+        @if (creditCardsResponse == null)
+{
+    <p><em>Cargando información...</em></p>
+}
+else
+{
+    <div class="container-fluid p-3 my-3">
+        <div class="d-flex gap-3">
+            @foreach (var creditCard in creditCardsResponse)
+            {
+                <div class="d-flex justify-content-start align-items-center">
+                    <div class="cardT p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <img src="https://i.imgur.com/gfp4wrR.png" width="50" />
+                            <div class="d-flex align-items-center">
+                                <h1 class="me-2 mb-0">VISA</h1>
+                                <!-- Agrega el checkbox aquí -->
+                                <div @onclick="() => ShowDetails(creditCard.CreditCardId)">
+                                    <button class="btn btn-danger">
+                                        <i class="oi oi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-4 number mt-3 d-flex justify-content-between align-items-center">
+                            <span>@creditCard.CardNumber.Substring(0, 4)</span>
+                            <span>@creditCard.CardNumber.Substring(4, 4)</span>
+                            <span>@creditCard.CardNumber.Substring(8, 4)</span>
+                            <span>@creditCard.CardNumber.Substring(12)</span>
+                        </div>
+                        <div class="p-4 card-border mt-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="cardholder">Card Holder</span>
+                                <span class="expires">Expires</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="name">@creditCard.CardHolderName</span>
+                                <span class="date">10/20</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    @if (isVisible)
+    {
+        @if (accountStatusResponse == null)
+        {
+            <p><em>Cargando información...</em></p>
+        }
+        else
+        {
+            <div class="container-fluid p-3 my-3">
+                <div class="mb-2">
+                    <button class="btn btn-success" @onclick="() => DownloadPdf(accountStatusResponse.IdTarjeta)">
+                        <i class="oi oi-data-transfer-download me-2"></i> Descargar PDF
+                    </button>
+                </div>
+                <div class="row justify-content-center align-items-center">
+                    <!-- Carta de Monto Total a Pagar -->
+                    <div class="col-md-8 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">Monto Total a Pagar</div>
+                            <div class="card-body">
+                                <p class="card-text">Monto Total a Pagar: $@accountStatusResponse.MontoTotalSinIntereses</p>
+                                <p class="card-text">Monto Total de Contado con Intereses: $@accountStatusResponse.MontoTotalContadoIntereses</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carta de Intereses y Cuotas -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">Intereses y Cuotas</div>
+                            <div class="card-body">
+                                <p class="card-text">Interés Bonificable: $@accountStatusResponse.InteresBonificable</p>
+                                <p class="card-text">Cuota Mínima a Pagar: $@accountStatusResponse.CuotaMinimaAPagar</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carta de Compras del Mes -->
+                    <div class="col-md-12 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">Compras del Mes</div>
+                            <div class="card-body">
+                                @if (!accountStatusResponse.Purchases.Any())
+                                {
+                                    <p class="card-text">No hay compras realizadas en este mes que mostrar.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-group">
+                                        @foreach (var purchase in accountStatusResponse.Purchases.Where(purchase => purchase.Date.Month == currentMonth && purchase.Date.Year == currentYear))
+                                        {
+                                            <li class="list-group-item">
+                                                <strong>@purchase.Date.ToShortDateString()</strong> - @purchase.Description - <span class="text-danger">$@purchase.Amount</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                <hr />
+                                <p class="card-text">Monto Total Compras Mes Actual: $@accountStatusResponse.TotalComprasMesActual</p>
+                                <p class="card-text">Monto Total Compras Mes Anterior: $@accountStatusResponse.TotalComprasMesAnterior</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <p>Seleccione una tarjeta para visualizar su estado de cuenta.</p>
+    }
+}
+@code {
+
+    private int currentMonth = DateTime.Now.Month;
+    private int currentYear = DateTime.Now.Year;
+    private CreditCardsResponse[]? creditCardsResponse;
+    private CreditCardAccountStatusResponse? accountStatusResponse;
+    private Guid UserId { get; set; }
+
+    private bool isVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId");
+
+        if (userIdClaim is not null)
+            UserId = Guid.Parse(userIdClaim.Value);
+
+        creditCardsResponse = await Http.GetFromJsonAsync<CreditCardsResponse[]>($"api/CreditCards/myCreditCards?userId={UserId}");
+
+    }
+
+    private async Task ShowDetails(Guid creditCardId)
+    {
+        accountStatusResponse = await Http.GetFromJsonAsync<CreditCardAccountStatusResponse>($"api/CreditCards/myCreditCardAccountStatus?creditCardId={creditCardId}");
+        isVisible = true;
+
+    }
+
+    private async void GetAccountStatus(Guid selectedCardId)
+    {
+        var response = await Http.GetFromJsonAsync<CreditCardAccountStatusResponse>($"api/CreditCards/myCreditCardAccountStatus?creditCardId={selectedCardId}");
+    }
+
+    private async Task DownloadPdf(Guid selectedCardId)
+    {
+        var response = await Http.GetAsync($"api/CreditCards/downloadCreditCardStatus?creditCardId={selectedCardId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "No se pudo descargar el archivo");
+        }
+        else
+        {
+            var fileStream = response.Content.ReadAsStream();
+            using var streamRef = new DotNetStreamReference(stream: fileStream);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", "Estado-de-Cuenta.pdf", streamRef);
+        }
+    }
+}

@@ -1,0 +1,63 @@
+﻿@page "/purchases"
+
+@using BankingApp.Client.Contracts
+@using BankingApp.Shared.Dtos.Responses
+@using Microsoft.AspNetCore.Authorization
+
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IPurchasesService _purchasesService
+
+@attribute [Authorize]
+
+<PageTitle>Banking App | Compras</PageTitle>
+
+<h1>Mis Compras</h1>
+<a class="btn btn-success btn-sm mb-3" href="new-purchase">Añadir Compra</a>
+
+@if (purchases == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (purchases.Count() == 0)
+{
+    <p><em>No hay compras registradas</em></p>
+}
+else
+{
+    <table id="purchasesTable" class="table table-stripped table-bordered">
+        <thead>
+            <tr>
+                <th>Descripción</th>
+                <th>Monto ($)</th>
+                <th>Fecha de compra</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var purchase in purchases)
+            {
+                <tr>
+                    <td>@purchase.Description</td>
+                    <td>@purchase.Amount</td>
+                    <td>@purchase.Date.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<PurchasesResponse> purchases;
+    private Guid UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId");
+
+        if (userIdClaim is not null)
+            UserId = Guid.Parse(userIdClaim.Value);
+
+        purchases = await _purchasesService.GetPurchasesAsync(UserId);
+    }
+}

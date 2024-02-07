@@ -1,0 +1,80 @@
+﻿@page "/new-payment"
+@using BankingApp.Client.Contracts
+@using BankingApp.Client.ViewModels
+@using BankingApp.Shared.Dtos.Requests
+@using Microsoft.AspNetCore.Authorization
+
+@inject SweetAlertService Swal
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ICreditCardsService _creditCardsService
+@inject IPaymentsService _paymentsService
+
+@attribute [Authorize]
+
+<h3>Realizar Pago</h3>
+
+<EditForm Model="newPayment" OnValidSubmit="OnValidSubmit">
+    <div class="mb-3">
+        <label class="form-label">Monto</label>
+        <InputNumber class="form-control" @bind-Value="newPayment.Amount"></InputNumber>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Tarjeta de Crédito</label>
+        <InputSelect class="form-select" @bind-Value="newPayment.CreditCardId">
+            <option value="">Seleccione una tarjeta</option>
+            @foreach (var creditCard in creditCards)
+            {
+                <option value="@creditCard.CreditCardId">@creditCard.CardNumber</option>
+            })
+        </InputSelect>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Fecha de pago</label>
+        <InputDate class="form-control" @bind-Value="newPayment.Date"></InputDate>
+    </div>
+
+    <button class="btn btn-success" type="submit">
+        Guardar
+    </button>
+    <a class="btn btn-warning" href="payments">Volver</a>
+</EditForm>
+
+@code {
+    NewPaymentRequest newPayment = new();
+    List<UserCreditCardsViewModel> creditCards = new();
+    private Guid UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId");
+
+        if (userIdClaim is not null)
+            UserId = Guid.Parse(userIdClaim.Value);
+
+        var response = await _creditCardsService.GetCreditCardsAsync(UserId);
+        foreach (var creditCard in response)
+        {
+            creditCards.Add(new UserCreditCardsViewModel
+                {
+                    CreditCardId = creditCard.CreditCardId,
+                    CardNumber = creditCard.CardNumber
+                });
+        };
+    }
+
+    private async Task OnValidSubmit()
+    {
+        var response = await _paymentsService.NewPaymentAsync(newPayment);
+        if (response)
+        {
+            await Swal.FireAsync("Pago realizado", "El pago ha sido realizado exitosamente", SweetAlertIcon.Success);
+            NavigationManager.NavigateTo("/payments");
+        }
+        else
+        {
+            await Swal.FireAsync("Error", "Ha ocurrido un error al realizar el pago", SweetAlertIcon.Error);
+        }
+    }
+}

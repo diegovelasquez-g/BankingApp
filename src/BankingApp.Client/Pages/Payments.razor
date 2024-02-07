@@ -1,0 +1,59 @@
+﻿@page "/payments"
+@using BankingApp.Client.Contracts
+@using BankingApp.Shared.Dtos.Responses
+@using Microsoft.AspNetCore.Authorization
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IPaymentsService _paymentsService
+
+@attribute [Authorize]
+
+<PageTitle>Banking App | Pagos</PageTitle>
+
+<h1>Mis Pagos</h1>
+<a class="btn btn-success btn-sm mb-3" href="new-payment">Añadir Pago</a>
+
+@if (payments == null)
+{
+    <p><em>Cargando información...</em></p>
+}
+else if (payments.Count == 0)
+{
+    <p><em>No hay pagos registrados...</em></p>
+}
+else
+{
+    <table id="purchasesTable" class="table table-stripped table-bordered">
+        <thead>
+            <tr>
+                <th>Monto ($)</th>
+                <th>Fecha de Pago</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var payment in payments)
+            {
+                <tr>
+                    <td>@payment.Amount</td>
+                    <td>@payment.PaymentDate.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<PaymentsResponse> payments;
+    private Guid UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId");
+
+        if (userIdClaim is not null)
+            UserId = Guid.Parse(userIdClaim.Value);
+
+        payments = await _paymentsService.GetPaymentsAsync(UserId);
+    }
+}

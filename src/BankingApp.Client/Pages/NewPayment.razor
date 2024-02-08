@@ -15,23 +15,27 @@
 <h3>Realizar Pago</h3>
 
 <EditForm Model="newPayment" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
     <div class="mb-3">
         <label class="form-label">Monto</label>
         <InputNumber class="form-control" @bind-Value="newPayment.Amount"></InputNumber>
+        <ValidationMessage For="@(() => newPayment.Amount)" />
     </div>
     <div class="mb-3">
         <label class="form-label">Tarjeta de Crédito</label>
-        <InputSelect class="form-select" @bind-Value="newPayment.CreditCardId">
+        <InputSelect class="form-select" @bind-Value="newPayment.CreditCardId" required>
             <option value="">Seleccione una tarjeta</option>
             @foreach (var creditCard in creditCards)
             {
                 <option value="@creditCard.CreditCardId">@creditCard.CardNumber</option>
             })
         </InputSelect>
+        <ValidationMessage For="@(() => newPayment.CreditCardId)" />
     </div>
     <div class="mb-3">
         <label class="form-label">Fecha de pago</label>
-        <InputDate class="form-control" @bind-Value="newPayment.Date"></InputDate>
+        <InputDate class="form-control" @bind-Value="newPayment.Date" min="2024-01-01"></InputDate>
+        <ValidationMessage For="@(() => newPayment.Date)" />
     </div>
 
     <button class="btn btn-success" type="submit">
@@ -47,6 +51,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        newPayment.Date = DateTime.Now;
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userIdClaim = authState.User.FindFirst("UserId");
 

@@ -29,6 +29,7 @@ public class GetUserCreditCardsQueryHandler : IRequestHandler<GetUserCreditCards
             CreditCardId = c.CreditCardId,
             CardHolderName = c.CardHolder,
             CardNumber = c.CardNumber,
+            AvailableBalance = c.AvailableBalance,
         });
     }
 

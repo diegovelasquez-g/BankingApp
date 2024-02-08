@@ -4,6 +4,7 @@
 @inject HttpClient Http
 @inject AuthenticationStateProvider authenticationProvider
 @inject NavigationManager navigationManager
+@inject SweetAlertService Swal
 
 @using BankingApp.Client.Extensions
 @using BankingApp.Shared.Dtos.Requests
@@ -70,6 +71,10 @@
             await authExtension.UpdateAuthState(userSession);
 
             navigationManager.NavigateTo("/index");
+        }
+        else
+        {
+            await Swal.FireAsync("Error", "Ha ocurrido un error.", SweetAlertIcon.Error);
         }
     }
 }

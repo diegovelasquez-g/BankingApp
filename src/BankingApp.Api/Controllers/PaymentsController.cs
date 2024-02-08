@@ -20,7 +20,7 @@ public class PaymentsController : ControllerBase
     public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentCommand command)
     {
         await _mediator.Send(command);
-        return Ok();
+        return Ok("The payment has been saved.");
     }
 
     [HttpGet("myPayments")]

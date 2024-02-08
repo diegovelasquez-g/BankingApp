@@ -15,27 +15,32 @@
 <h3>Nueva Compra</h3>
 
 <EditForm Model="newPurchase" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
     <div class="mb-3">
         <label class="form-label">Descripción</label>
         <InputTextArea class="form-control" @bind-Value="newPurchase.Description"></InputTextArea>
+        <ValidationMessage For="@(() => newPurchase.Description)" />
     </div>
     <div class="mb-3">
         <label class="form-label">Tarjeta de Crédito</label>
-        <InputSelect class="form-select" @bind-Value="newPurchase.CreditCardId">
+        <InputSelect class="form-select" @bind-Value="newPurchase.CreditCardId" required>
             <option value="">Seleccione una tarjeta</option>
-            @foreach(var creditCard in creditCards)
+            @foreach (var creditCard in creditCards)
             {
                 <option value="@creditCard.CreditCardId">@creditCard.CardNumber</option>
             })
         </InputSelect>
+        <ValidationMessage For="@(() => newPurchase.CreditCardId)" />
     </div>
     <div class="mb-3">
         <label class="form-label">Monto</label>
         <InputNumber class="form-control" @bind-Value="newPurchase.Amount"></InputNumber>
+        <ValidationMessage For="@(() => newPurchase.Amount)" />
     </div>
     <div class="mb-3">
         <label class="form-label">Fecha de compra</label>
-        <InputDate class="form-control" @bind-Value="newPurchase.Date"></InputDate>
+        <InputDate class="form-control" @bind-Value="newPurchase.Date" min="01-01-2024" max=@date></InputDate>
+        <ValidationMessage For="@(() => newPurchase.Date)" />
     </div>
 
     <button class="btn btn-success" type="submit">
@@ -48,9 +53,11 @@
     NewPurchaseRequest newPurchase = new();
     List<UserCreditCardsViewModel> creditCards = new();
     private Guid UserId;
+    DateTime date = DateTime.Now;
 
     protected override async Task OnInitializedAsync()
     {
+        newPurchase.Date = date;
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userIdClaim = authState.User.FindFirst("UserId");
 
@@ -58,18 +65,25 @@
             UserId = Guid.Parse(userIdClaim.Value);
 
         var response = await _creditCardsService.GetCreditCardsAsync(UserId);
-        foreach(var creditCard in response)
+        foreach (var creditCard in response)
         {
             creditCards.Add(new UserCreditCardsViewModel
-            {
-                CreditCardId = creditCard.CreditCardId,
-                CardNumber = creditCard.CardNumber
-            });
+                {
+                    CreditCardId = creditCard.CreditCardId,
+                    CardNumber = creditCard.CardNumber,
+                    AvailableBalance = creditCard.AvailableBalance
+                });
         };
     }
 
     private async Task OnValidSubmit()
     {
+        if (newPurchase.Amount > creditCards.FirstOrDefault(c => c.CreditCardId == newPurchase.CreditCardId).AvailableBalance)
+        {
+            await Swal.FireAsync("Error", "El monto de la compra supera el saldo de la tarjeta", SweetAlertIcon.Error);
+            return;
+        }
+
         var response = await _purchasesService.NewPurchaseAsync(newPurchase);
         if (response)
         {

@@ -20,7 +20,7 @@ public class PurchasesController : ControllerBase
     public async Task<IActionResult> CreatePurchase([FromBody] CreatePurchaseCommand command)
     {
         await _mediator.Send(command);
-        return Ok();
+        return Ok("The purchase has been saved.");
     }
 
     [HttpGet("myPurchases")]

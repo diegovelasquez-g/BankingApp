@@ -28,11 +28,11 @@ public class AuthQueryHandler : IRequestHandler<AuthUserQuery, LoginResponse>
     {
         var user = await _unitOfWork.Users.GeyByEmailAsync(request.Email);
         if (user == null)
-           throw new Exception("Invalid email or password");
+           throw new ValidationException("Invalid email or password");
 
         var _user = await _unitOfWork.Users.AuthUserAsync(request.Email, request.Password);
         if (_user == null)
-            throw new Exception("Invalid email or password");
+            throw new ValidationException("Invalid email or password");
 
         return _mapper.Map<LoginResponse>(_user);
     }

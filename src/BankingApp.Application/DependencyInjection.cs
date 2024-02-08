@@ -24,12 +24,13 @@ public static class DependencyInjection
     public static IServiceCollection AddPersistance(this IServiceCollection services)
     {
         services.AddSingleton<IConnectionFactory, ConnectionFactory>();
+        services.AddSingleton<DapperContext>();
         return services;
     }
 
     public static IServiceCollection AddDomain(this IServiceCollection services)
     {        
-        //services.AddSingleton<IUnitOfWork, UnitOfWork>();
+        services.AddSingleton<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IPurchaseRepository, PurchaseRepository>();
         services.AddSingleton<ICreditCardRepository, CreditCardRepository>();

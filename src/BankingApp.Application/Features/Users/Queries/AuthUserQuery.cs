@@ -15,22 +15,22 @@ public class AuthUserQuery : IRequest<LoginResponse>
 
 public class AuthQueryHandler : IRequestHandler<AuthUserQuery, LoginResponse>
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public AuthQueryHandler(IUserRepository userRepository, IMapper mapper)
+    public AuthQueryHandler(IUnitOfWork unitOfWork, IMapper mapper)
     {
-        _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
     public async Task<LoginResponse> Handle(AuthUserQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GeyByEmailAsync(request.Email);
+        var user = await _unitOfWork.Users.GeyByEmailAsync(request.Email);
         if (user == null)
            throw new Exception("Invalid email or password");
 
-        var _user = await _userRepository.AuthUserAsync(request.Email, request.Password);
+        var _user = await _unitOfWork.Users.AuthUserAsync(request.Email, request.Password);
         if (_user == null)
             throw new Exception("Invalid email or password");
 

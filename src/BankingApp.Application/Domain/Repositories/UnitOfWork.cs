@@ -1,4 +1,5 @@
 ﻿using BankingApp.Application.Domain.Interfaces;
+using BankingApp.Application.Infraestructure.Persistance;
 using BankingApp.Application.Shared;
 
 namespace BankingApp.Application.Domain.Repositories;
@@ -6,39 +7,39 @@ namespace BankingApp.Application.Domain.Repositories;
 public class UnitOfWork : IUnitOfWork
 {
     private bool _disposed;
-    private readonly IConnectionFactory _connectionFactory;
+    private readonly DapperContext _dapperContext;
     public IUserRepository Users { get; private set; }
 
-    public UnitOfWork(IConnectionFactory connectionFactory)
+    public UnitOfWork(DapperContext dapperContext)
     {
-        _connectionFactory = connectionFactory;
+        _dapperContext = dapperContext;
         Init();
     }
 
     private void Init()
     {
-        Users = new UserRepository(_connectionFactory);
+        Users = new UserRepository(_dapperContext);
     }
 
     public void BeginTransaction()
     {
-        var connection = _connectionFactory.Connection;
+        var connection = _dapperContext.Connection;
         connection.Open();
-        _connectionFactory.Transaction = connection.BeginTransaction();
+        _dapperContext.Transaction = connection.BeginTransaction();
     }
 
     public void Commit()
     {
-        _connectionFactory.Transaction?.Commit();
-        _connectionFactory.Transaction?.Dispose();
-        _connectionFactory.Transaction = null;
+        _dapperContext.Transaction?.Commit();
+        _dapperContext.Transaction?.Dispose();
+        _dapperContext.Transaction = null;
     }
 
     public void Rollback()
     {
-        _connectionFactory.Transaction?.Rollback();
-        _connectionFactory.Transaction?.Dispose();
-        _connectionFactory.Transaction = null;
+        _dapperContext.Transaction?.Rollback();
+        _dapperContext.Transaction?.Dispose();
+        _dapperContext.Transaction = null;
     }
 
     protected virtual void Dispose(bool disposing)
@@ -47,8 +48,8 @@ public class UnitOfWork : IUnitOfWork
         {
             if (disposing)
             {
-                _connectionFactory.Transaction?.Dispose();
-                _connectionFactory.Connection?.Dispose();
+                _dapperContext.Transaction?.Dispose();
+                _dapperContext.Connection?.Dispose();
             }
             _disposed = true;
         }
